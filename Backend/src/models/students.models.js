@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
 
-const studentSchema = new Schema({
-    userId: {
-        type: Schema.Types.ObjectId,
-        ref: "User"
-    },
+const studentSchema = new Schema({    
     id: {
         type: String,
         required: true
+    },
+    password: {
+        type: String,
+        required: [true, "password is mandatory"]
     },
     name: {
         type: String,
@@ -53,6 +53,9 @@ const studentSchema = new Schema({
     photo: {
         type: String, // cloudinary url
         required: true
+    },
+    refreshToken: {
+        type: String
     }
 }, {timestamps: true});
 

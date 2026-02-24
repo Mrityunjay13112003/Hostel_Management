@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const userSchema = new Schema({
-    userId: {
+    adminId: {
         type: String,
         required: [true, "userId is mandatory"], 
         unique: true
