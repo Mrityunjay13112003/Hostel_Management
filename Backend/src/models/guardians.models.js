@@ -1,28 +1,28 @@
 import mongoose,{Schema} from "mongoose";
 
 const guardianSchema = new Schema({
-    studentId: {
+    student_id: {
         type: Schema.Types.ObjectId,
         ref: "Student"
     },
-    name: {
+    guardianName: {
         type: String,
         required: true
     },
-    mobileNumber: {
+    guardianMobileNumber: {
         type: String,
         required: true
     },
-    email: {
+    guardianEmail: {
         type: String,
         unique: true,
         lowercase: true,
         trim: true,
     },
-    address: {
+    guardianAddress: {
         type: String,
         required: true
     }
 }, {timestamps: true});
 
-export const Guardian = mongoose.model({}, {timestamps: true});
+export const Guardian = mongoose.model("Guardian", guardianSchema);

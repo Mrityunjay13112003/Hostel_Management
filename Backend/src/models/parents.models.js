@@ -1,19 +1,19 @@
 import mongoose,{Schema} from "mongoose";
 
 const parentSchema = new Schema({
-    studentId: {
+    student_id: {
         type: Schema.Types.ObjectId,
         ref: "Student"
     },
-    name: {
+    parentName: {
         type: String,
         required: true
     },
-    mobileNumber: {
+    parentMobileNumber: {
         type: String,
         required: true
     },
-    email: {
+    parentEmail: {
         type: String,
         unique: true,
         lowercase: true,
