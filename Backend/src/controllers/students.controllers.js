@@ -131,7 +131,7 @@ const loginStudent = asyncHandler(async(req, res) => {
     // setup the cookie options.
     const options = {
         httpOnly: true,
-        secure: true
+        secure: false // production ke time ise true kr dena.
     }
 
     // send the final response.

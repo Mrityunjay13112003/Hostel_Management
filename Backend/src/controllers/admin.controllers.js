@@ -80,7 +80,7 @@ const adminLogin = asyncHandler(async(req, res) => {
     // setting the options for saving the access and refresh tokens in the browser of the admin.
     const options = {
         httpOnly: true,
-        secure: true
+        secure: false  // production ke time ise true kr dena.
     }
 
     // sending the final response.
