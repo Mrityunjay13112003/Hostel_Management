@@ -98,10 +98,15 @@ const loginStudent = asyncHandler(async(req, res) => {
     const {studentId, password} = req.body;
 
     // checking if all fields are filled or not.
-    if([studentId, password].some((field) => field?.trim() === ""))
-    {
-        throw new ApiError(400, "All fields are required");
-    }
+    if (
+        typeof studentId !== "string" ||
+        typeof password !== "string" ||
+        !studentId.trim() ||
+        !password.trim()
+    )
+{
+  throw new ApiError(400, "All fields are required");
+}
 
     // checking if the student is registered or not.
     const student = await Student.findOne({studentId: studentId});
@@ -118,7 +123,7 @@ const loginStudent = asyncHandler(async(req, res) => {
     }
 
     // generating the access and refresh tokens for the registered student.
-    const {accessToken, refreshToken} = generateAccessAndRefreshToken(student._id);
+    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(student._id);
 
     // get the document of the required student from db without refresh token and password.
     const loggedInStudent = await Student.findById(student._id).select("-password -refreshToken");
