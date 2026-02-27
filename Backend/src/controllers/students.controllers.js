@@ -8,6 +8,30 @@ import { ApiError } from "../utils/ApiError.utils.js";
 import {ApiResponse} from "../utils/ApiResponse.utils.js"
 import jwt from "jsonwebtoken";
 
+const generateAccessAndRefreshToken = async(student_id) => {
+
+    try
+    {
+        // find the document of the student for which the access and refresh token is to be generated
+        const student = await Student.findById(student_id);
+
+        // generate the access and refresh tokens for the required student document
+        const accessToken = student.generateAccessToken();
+        const refreshToken = student.generateRefreshToken();
+
+        // save the refresh token into the database
+        student.refreshToken = refreshToken;
+        await student.save({validateBeforeSave: false}); // sirf kuchh fields ko update krne ke liye, warna error aaega for not updating the {required: true} fields.
+
+        return {accessToken, refreshToken};
+    }
+    catch(error)
+    {
+        console.log(error.message);
+        throw new ApiError(500, "Error occured while generating the access/refresh token");
+    }
+} 
+
 const registerStudent = asyncHandler(async (req, res) => {
 
     // form data collected from req.body.
@@ -68,6 +92,53 @@ const registerStudent = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdStudent, "Student registered successfully"));
 })
 
+const loginStudent = asyncHandler(async(req, res) => {
+
+    // extracting the form data from the body of the request object.
+    const {studentId, password} = req.body;
+
+    // checking if all fields are filled or not.
+    if([studentId, password].some((field) => field?.trim() === ""))
+    {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    // checking if the student is registered or not.
+    const student = await Student.findOne({studentId: studentId});
+    if(!student)
+    {
+        throw new ApiError(401, "Student is not registered");
+    }
+
+    // checking the password of the student.
+    const passwordCheck = await student.checkPassword(password);
+    if(!passwordCheck)
+    {
+        throw new ApiError(401, "Password of the required student ID is wrong");
+    }
+
+    // generating the access and refresh tokens for the registered student.
+    const {accessToken, refreshToken} = generateAccessAndRefreshToken(student._id);
+
+    // get the document of the required student from db without refresh token and password.
+    const loggedInStudent = await Student.findById(student._id).select("-password -refreshToken");
+
+    // setup the cookie options.
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    // send the final response.
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(new ApiResponse(200, loggedInStudent, "Student is successfully logged in"));
+
+})
+
 export {
-    registerStudent
+    registerStudent,
+    loginStudent
 }
