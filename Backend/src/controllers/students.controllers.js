@@ -143,7 +143,31 @@ const loginStudent = asyncHandler(async(req, res) => {
 
 })
 
+const logoutStudent = asyncHandler(async(req, res) => {
+    
+    // extracting the student document whose refresh token has to be deleted.
+    const student = await Student.findById(req.user._id);
+
+    // saving the document of the student with deleted refresh token.
+    student.refreshToken = undefined;
+    await student.save({validateBeforeSave: false});
+
+    // setting up the options for clearing the cookies.
+    const options = { // should be same as login
+        httpOnly: true,
+        secure: false
+    }
+
+    // returning the final response with clearing the access and refresh token cookies.
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "Student successfully logged out."));
+})
+
 export {
     registerStudent,
-    loginStudent
+    loginStudent,
+    logoutStudent
 }

@@ -2,7 +2,7 @@ import { Admin } from "../models/admin.models.js";
 import { Student } from "../models/students.models.js";
 import { ApiError } from "../utils/ApiError.utils.js";
 import { asyncHandler } from "../utils/asyncHandler.utils.js"
-import jwt, { decode } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 // middleware for checking the access token.
 const checkAccessToken = asyncHandler(async(req, _, next) => {
@@ -51,3 +51,5 @@ const checkAccessToken = asyncHandler(async(req, _, next) => {
         throw new ApiError(401, error?.message || "Invalid access token");
     }
 })
+
+export {checkAccessToken};

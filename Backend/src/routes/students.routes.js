@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { upload } from "../middlewares/multer.middlewares.js";
-import { registerStudent, loginStudent } from "../controllers/students.controllers.js";
+import { registerStudent, loginStudent, logoutStudent } from "../controllers/students.controllers.js";
+import { checkAccessToken } from "../middlewares/auth.middlewares.js";
 
 const studentRouter = Router();
 
@@ -9,5 +10,8 @@ studentRouter.route("/register").post(upload.single("profilePhoto"), registerStu
 
 // student login route.
 studentRouter.route("/login").post(loginStudent);
+
+// student logout route.
+studentRouter.route("/logout").get(checkAccessToken, logoutStudent);
 
 export {studentRouter};
