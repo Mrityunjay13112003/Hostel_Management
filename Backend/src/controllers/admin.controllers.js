@@ -127,7 +127,31 @@ const adminRegister = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, createdAdmin, "Admin registered successfully."));
 })
 
+const adminLogout = asyncHandler(async(req, res) => {
+
+    // removing the refresh token from the required admin document.
+    const adminDocument = await Admin.findById(req.user._id);
+    adminDocument.refreshToken = undefined;
+
+    // saving the new admin document in the db.
+    adminDocument.save({validateBeforeSave: false});
+
+    // setting up the options for clearing the cookies.
+    const options = { // should be same as login
+        httpOnly: true,
+        secure: false
+    }
+
+    // returning the final response with deleted access and refresh token cookies.
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "Admin logged out successfully."));
+})
+
 export {
     adminLogin,
-    adminRegister
+    adminRegister,
+    adminLogout
 };

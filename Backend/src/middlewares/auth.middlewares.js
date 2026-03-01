@@ -42,8 +42,10 @@ const checkAccessToken = asyncHandler(async(req, _, next) => {
             throw new ApiError(401, "Student/Admin not found");
         }
 
+        // storing the document in the request object.
         req.user = document;
 
+        // going to the next middleware.
         next();
     }
     catch(error)
