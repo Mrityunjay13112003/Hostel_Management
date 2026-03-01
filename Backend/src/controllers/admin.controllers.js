@@ -30,12 +30,19 @@ const generateAccessAndRefreshToken = async(admin_id) => {
 
 const seedAdmin = async() => {
 
-    // creating id and password for the first admin.
-    const adminId = `${process.env.ADMIN_ID}`;
-    const password = `${process.env.ADMIN_PASSWORD}`;
+    try
+    {
+        // creating id and password for the first admin.
+        const adminId = `${process.env.ADMIN_ID}`;
+        const password = `${process.env.ADMIN_PASSWORD}`;
 
-    // creating the document in the db.
-    const admin = await Admin.create({adminId, password});
+        // creating the document in the db.
+        const admin = await Admin.create({adminId, password});
+    }
+    catch(error)
+    {
+        throw new ApiError(500, error.message);
+    }
 
 }
 
@@ -91,6 +98,36 @@ const adminLogin = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, loggedInAdmin, "Admin is successfully logged in"));
 })
 
+const adminRegister = asyncHandler(async(req, res) => {
+
+    // destructuring the password from the body of the request object.
+    const {password} = req.body;
+
+    // checking if field is filled or not.
+    if(password.trim() === "")
+    {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    // creating the admin id and a  new document for the newly registered admin.
+    const noOfAdmins = await Admin.countDocuments();
+    const adminId = `ADMN-${noOfAdmins+1}`;
+    const registeredAdmin = await Admin.create({adminId, password});
+
+    // checking if the new admin document is created or not.
+    const createdAdmin = await Admin.find({adminId}).select("-password -refreshToken");
+    if(!createdAdmin)
+    {
+        throw new ApiError(500, "Admin not registered.");
+    }
+
+    // returning the final successful response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, createdAdmin, "Admin registered successfully."));
+})
+
 export {
-    adminLogin
+    adminLogin,
+    adminRegister
 };
