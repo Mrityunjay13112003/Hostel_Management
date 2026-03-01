@@ -150,8 +150,60 @@ const adminLogout = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, {}, "Admin logged out successfully."));
 })
 
+const refreshAccessToken = asyncHandler(async(req, res) => {
+
+    // extracting the refresh token from the cookie or from the body of the request object.
+    const givenRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+    // checking if the refresh token is given or not.
+    if(!givenRefreshToken)
+    {
+        throw new ApiError(401, "Unauthorized access");
+    }
+
+    // decoding the refresh token and checking if an admin exist having the given refresh token exists or not.
+    try
+    {
+        const decodedToken = jwt.verify(givenRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+        // checking if an admin exist with the given refresh token.
+        const admin = await Admin.findById(decodedToken._id);
+        if(!admin)
+        {
+            throw new ApiError(401, "Invalid refresh token");
+        }
+
+        // checking if the refresh token is used out or not.
+        if(givenRefreshToken !== admin?.refreshToken)
+        {
+            throw new ApiError(401, "Refresh token expired or used");
+        }
+
+        // generating the access token and the refresh token and storing the refresh token in the db.
+        const {accessToken, refreshToken} = await generateAccessAndRefreshToken(admin._id);
+
+        // options for setting the tokens in the cookies.
+        const options = {
+            httpOnly: true,
+            secure: false // production ke time true hoga ye and development ke time false.
+        }
+
+        // sending final response with the tokens.
+        res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(new ApiResponse(200, {accessToken, refreshToken}, "Access token successfully refreshed"));
+    }
+    catch(error)
+    {
+        throw new ApiError(401, error?.message || "Invalid refresh token");
+    }
+})
+
 export {
     adminLogin,
     adminRegister,
-    adminLogout
+    adminLogout,
+    refreshAccessToken
 };
