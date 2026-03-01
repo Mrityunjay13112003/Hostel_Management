@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { upload } from "../middlewares/multer.middlewares.js";
-import { registerStudent, loginStudent, logoutStudent } from "../controllers/students.controllers.js";
+import { registerStudent, loginStudent, logoutStudent, refreshAccessToken } from "../controllers/students.controllers.js";
 import { checkAccessToken } from "../middlewares/auth.middlewares.js";
 
 const studentRouter = Router();
@@ -13,5 +13,8 @@ studentRouter.route("/login").post(loginStudent);
 
 // student logout route.
 studentRouter.route("/logout").get(checkAccessToken, logoutStudent);
+
+// route for refreshing access token.
+studentRouter.route("/refresh-access-token").post(refreshAccessToken);
 
 export {studentRouter};

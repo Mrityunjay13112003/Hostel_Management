@@ -166,8 +166,60 @@ const logoutStudent = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, {}, "Student successfully logged out."));
 })
 
+const refreshAccessToken = asyncHandler(async(req, res) => {
+
+    // extracting the refresh token from the cookie or from the body of the request object.
+    const givenRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+    // checking if the refresh token is given or not.
+    if(!givenRefreshToken)
+    {
+        throw new ApiError(401, "Unauthorized access");
+    }
+
+    // decoding the refresh token and checking if a student exist having the given refresh token exists or not.
+    try
+    {
+        const decodedToken = jwt.verify(givenRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+        // checking if a student exist with the given refresh token.
+        const student = await Student.findById(decodedToken._id);
+        if(!student)
+        {
+            throw new ApiError(401, "Invalid refresh token");
+        }
+
+        // checking if the refresh token is used out or not.
+        if(givenRefreshToken !== student?.refreshToken)
+        {
+            throw new ApiError(401, "Refresh token expired or used");
+        }
+
+        // generating the access token and the refresh token and storing the refresh token in the db.
+        const {accessToken, refreshToken} = await generateAccessAndRefreshToken(student._id);
+
+        // options for setting the tokens in the cookies.
+        const options = {
+            httpOnly: true,
+            secure: false // production ke time true hoga ye and development ke time false.
+        }
+
+        // sending final response with the tokens.
+        res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(new ApiResponse(200, {accessToken, refreshToken}, "Access token successfully refreshed"));
+    }
+    catch(error)
+    {
+        throw new ApiError(401, error?.message || "Invalid refresh token");
+    }
+})
+
 export {
     registerStudent,
     loginStudent,
-    logoutStudent
+    logoutStudent,
+    refreshAccessToken
 }
