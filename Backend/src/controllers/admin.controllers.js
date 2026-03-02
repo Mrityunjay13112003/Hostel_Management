@@ -3,6 +3,8 @@ import { asyncHandler } from "../utils/asyncHandler.utils.js";
 import { ApiError } from "../utils/ApiError.utils.js";
 import { ApiResponse } from "../utils/ApiResponse.utils.js";
 import jwt from "jsonwebtoken";
+import { Student } from "../models/students.models.js";
+import { Fee } from "../models/fees.models.js";
 
 const generateAccessAndRefreshToken = async(admin_id) => {
 
@@ -201,9 +203,42 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
     }
 })
 
+const setFeePlan = asyncHandler(async(req, res) => {
+
+    // checking if the fee plan is in the body of the request.
+    if(!req.body.feePlan)
+    {
+        throw new ApiError(400, "Fee plan is required");
+    }
+
+    // extracting the fee plan from the body of the request body.
+    const feePlan = req.body.feePlan;
+    
+    // taking all the students model from the db which are in the hostel.
+    const students = await Student.find({hasLeft: false}).select("_id");
+
+    // checking if there are any active students or not.
+    if(!students.length)
+    {
+        throw new ApiError(404, "No active student found");
+    }
+
+    // storing the ids of all students in an array.
+    const studentID = students.map(student => student._id);
+
+    // updating the plan field in the fee model of the obtained students.
+    await Fee.updateMany({student_id: {$in: studentID}}, {$set: {plan: feePlan}});
+
+    // sending the final successful response.
+    res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Fee updated successfully"));
+})
+
 export {
     adminLogin,
     adminRegister,
     adminLogout,
-    refreshAccessToken
+    refreshAccessToken,
+    setFeePlan
 };
