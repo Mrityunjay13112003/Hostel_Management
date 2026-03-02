@@ -229,9 +229,27 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
     }
 })
 
+const changeStudentPassword = asyncHandler(async(req, res) => {  // isme extra features lgega, baad me krenge.
+
+
+})
+
+const viewProfile = asyncHandler(async(req, res) => {
+
+    // getting the student data from the db using the _id in the user object in request object.
+    const studentProfile = await Student.findById(req.user._id).select("-password -refreshToken -_id -createdAt -updatedAt -__v -isAdmitted -hasLeft");
+
+    // returning the final response with the desired data.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, studentProfile, "Student profile is successfully returned"));
+})
+
 export {
     registerStudent,
     loginStudent,
     logoutStudent,
-    refreshAccessToken
+    refreshAccessToken,
+    changeStudentPassword,
+    viewProfile
 }
