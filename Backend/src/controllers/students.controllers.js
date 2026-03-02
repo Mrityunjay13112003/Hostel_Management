@@ -122,6 +122,18 @@ const loginStudent = asyncHandler(async(req, res) => {
         throw new ApiError(401, "Password of the required student ID is wrong");
     }
 
+    // checking if the student has left the hostel or not.
+    if(student.hasLeft)
+    {
+        throw new ApiError(401, "Student has left the hostel.");
+    }
+
+    // checking whether the student is admitted or is just an inquiry.
+    if(!student.isAdmitted)
+    {
+        throw new ApiError(401, "Student is not admitted and is just an inquiry.");
+    }
+
     // generating the access and refresh tokens for the registered student.
     const {accessToken, refreshToken} = await generateAccessAndRefreshToken(student._id);
 
