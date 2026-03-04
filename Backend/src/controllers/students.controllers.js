@@ -32,7 +32,7 @@ const generateAccessAndRefreshToken = async(student_id) => {
     }
 } 
 
-const registerStudent = asyncHandler(async (req, res) => {
+const registerStudent = asyncHandler(async (req, res) => {  // update krna hoga is controller ko sms otp ki help se.
 
     // form data collected from req.body.
     const studentData = req.body;

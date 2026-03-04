@@ -4,42 +4,33 @@ import jwt from "jsonwebtoken";
 
 const studentSchema = new Schema({    
     studentId: {
-        type: String,
-        required: true
+        type: String
     },
     password: {
-        type: String,
-        required: [true, "password is mandatory"]
+        type: String
     },
     name: {
-        type: String,
-        required: true
+        type: String
     },
     dateOfBirth: {
-        type: Date,
-        required: true
+        type: Date
     },
     email: {
         type: String,
         unique: true,
-        lowercase: true,
-        trim: true
+        lowercase: true
     },
     mobileNumber: {
-        type: String,
-        required: true
+        type: String
     },
     address: {
-        type: String,
-        required: true
+        type: String
     },
     institute: {
-        type: String,
-        required: true
+        type: String
     },
     education: {
-        type: String,
-        required: true
+        type: String
     },
     dateOfJoining: {
         type: Date
@@ -53,8 +44,10 @@ const studentSchema = new Schema({
         default: false
     },
     photo: {
-        type: String, // cloudinary url
-        required: true
+        type: String  // cloudinary url.
+    },
+    remark: {         // only for the inquiry.
+        type: String  
     },
     refreshToken: {
         type: String

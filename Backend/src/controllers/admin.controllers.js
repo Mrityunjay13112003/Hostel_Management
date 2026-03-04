@@ -235,10 +235,38 @@ const setFeePlan = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, {}, "Fee updated successfully"));
 })
 
+const inquiryAddition = asyncHandler(async(req, res) => {
+
+    // destructuring the data from the body of the request object.
+    const {name, address, remark} = req.body;
+
+    // checking if all the fields are filled or not.
+    if([name, address, remark].some(field => !field || field.trim() === ""))
+    {
+        throw new ApiError(400, "All fields are required.");
+    }
+
+    // creating a new document in db for the new inquiry.
+    const inquiry = await Student.create({name, address, dateOfJoining: Date.now(), remark});
+
+    // checking if the new document is created or not.
+    const createdInquiry = await Student.findById(inquiry._id);
+    if(!createdInquiry)
+    {
+        throw new ApiError(500, "Something went wrong while registering the new inquiry.");
+    }
+
+    // returning the final response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, createdInquiry, "Inquiry is successfully stored in the database."));
+})
+
 export {
     adminLogin,
     adminRegister,
     adminLogout,
     refreshAccessToken,
-    setFeePlan
+    setFeePlan,
+    inquiryAddition
 };
