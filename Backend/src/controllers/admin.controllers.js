@@ -203,7 +203,7 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
     }
 })
 
-const setFeePlan = asyncHandler(async(req, res) => {
+const setFeePlan = asyncHandler(async(req, res) => {  // in admin dashboard.
 
     // checking if the fee plan is in the body of the request.
     if(!req.body.feePlan)
@@ -235,7 +235,7 @@ const setFeePlan = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, {}, "Fee updated successfully"));
 })
 
-const inquiryAddition = asyncHandler(async(req, res) => {
+const inquiryAddition = asyncHandler(async(req, res) => {    // in admin dashboard.
 
     // destructuring the data from the body of the request object.
     const {name, address, remark, mobileNumber} = req.body;
@@ -262,11 +262,36 @@ const inquiryAddition = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, createdInquiry, "Inquiry is successfully stored in the database."));
 })
 
+const adminDashboard = asyncHandler(async (req, res) => {
+
+    // fetching names of all types of students in parallel manner.
+    const [inquiredStudents, currentStudents, leftStudents] = await Promise.all([
+        Student.find({ isAdmitted: false }).select("name"),
+        Student.find({ isAdmitted: true, hasLeft: false }).select("name"),
+        Student.find({ hasLeft: true }).select("name")
+    ]);
+
+    // creating final data object.
+    const data = {
+        adminId: req.user.adminId,
+        inquiredStudents,
+        currentStudents,
+        leftStudents
+    };
+
+    // returning the final response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, data, "All required data finally retrieved"));
+
+});
+
 export {
     adminLogin,
     adminRegister,
     adminLogout,
     refreshAccessToken,
     setFeePlan,
-    inquiryAddition
+    inquiryAddition,
+    adminDashboard
 };
