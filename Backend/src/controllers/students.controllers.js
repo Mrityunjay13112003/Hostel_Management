@@ -236,13 +236,36 @@ const changeStudentPassword = asyncHandler(async(req, res) => {  // isme extra f
 
 const viewProfile = asyncHandler(async(req, res) => {
 
+    // extracting the _id of the required student from the body of the request object.
+    const id = req.user._id;
+    
     // getting the student data from the db using the _id in the user object in request object.
-    const studentProfile = await Student.findById(req.user._id).select("-password -refreshToken -_id -createdAt -updatedAt -__v -isAdmitted -hasLeft");
+    const studentData = await Student.findById(id).select("-password -refreshToken").lean();
+
+    // checking if the details of the student is recieved or not.
+    if(!studentData)
+    {
+        throw new ApiError(404, "No such student exists whose _id matches with the given _id");
+    }
+
+    // getting the details of the parent, guardian and fee for the required student if the student is admitted.
+    if(studentData.isAdmitted)
+    {
+        const [parent, guardian, fee] = await Promise.all([
+            Parent.findOne({student_id: id}).select("-refreshToken -password").lean(),
+            Guardian.findOne({student_id: id}).select("-refreshToken -password").lean(),
+            Fee.findOne({student_id: id}).select("-refreshToken -password").lean()
+        ]);
+
+        studentData.parent = parent;
+        studentData.guardian = guardian;
+        studentData.fee = fee;
+    }
 
     // returning the final response with the desired data.
     return res
     .status(200)
-    .json(new ApiResponse(200, studentProfile, "Student profile is successfully returned"));
+    .json(new ApiResponse(200, studentData, "Student profile is successfully returned"));
 })
 
 export {

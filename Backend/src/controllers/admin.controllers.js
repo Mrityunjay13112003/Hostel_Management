@@ -5,6 +5,8 @@ import { ApiResponse } from "../utils/ApiResponse.utils.js";
 import jwt from "jsonwebtoken";
 import { Student } from "../models/students.models.js";
 import { Fee } from "../models/fees.models.js";
+import { Parent } from "../models/parents.models.js";
+import { Guardian } from "../models/guardians.models.js";
 
 const generateAccessAndRefreshToken = async(admin_id) => {
 
@@ -286,6 +288,46 @@ const adminDashboard = asyncHandler(async (req, res) => {
 
 });
 
+const getStudent = asyncHandler(async(req, res) => {  // in admin dashboard. 
+
+    // extracting the _id of the required student from the url of the request.
+    const id = req.params._id;
+
+    // checking if the id is given or not.
+    if(!id)
+    {
+        throw new ApiError(400, "Id of the student is required");
+    }
+
+    // getting the details of the student from the database.
+    const studentData = await Student.findById(id).select("-refreshToken -password").lean();
+
+    // checking if the details of the student is recieved or not.
+    if(!studentData)
+    {
+        throw new ApiError(404, "No such student exists whose _id matches with the given _id");
+    }
+
+    // getting the details of the parent, guardian and fee for the required student if the student is admitted.
+    if(studentData.isAdmitted)
+    {
+        const [parent, guardian, fee] = await Promise.all([
+            Parent.findOne({student_id: id}).select("-refreshToken -password").lean(),
+            Guardian.findOne({student_id: id}).select("-refreshToken -password").lean(),
+            Fee.findOne({student_id: id}).select("-refreshToken -password").lean()
+        ]);
+
+        studentData.parent = parent;
+        studentData.guardian = guardian;
+        studentData.fee = fee;
+    }
+
+    // sending the final response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, studentData, "Data of the required student is returned successfully"));
+})
+
 export {
     adminLogin,
     adminRegister,
@@ -293,5 +335,6 @@ export {
     refreshAccessToken,
     setFeePlan,
     inquiryAddition,
-    adminDashboard
+    adminDashboard,
+    getStudent
 };

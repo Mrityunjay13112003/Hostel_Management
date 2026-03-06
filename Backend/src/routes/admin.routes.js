@@ -1,5 +1,14 @@
 import { Router } from "express";
-import { adminLogin, adminRegister, adminLogout, refreshAccessToken, setFeePlan, inquiryAddition, adminDashboard } from "../controllers/admin.controllers.js";
+import { 
+    adminLogin, 
+    adminRegister, 
+    adminLogout, 
+    refreshAccessToken, 
+    setFeePlan, 
+    inquiryAddition, 
+    adminDashboard, 
+    getStudent 
+} from "../controllers/admin.controllers.js";
 import { checkAccessToken } from "../middlewares/auth.middlewares.js";
 
 const adminRouter = Router();
@@ -24,5 +33,8 @@ adminRouter.route("/inquiry-addition").post(checkAccessToken, inquiryAddition); 
 
 // admin dashboard route.
 adminRouter.route("/dashboard").get(checkAccessToken, adminDashboard); // protected route.
+
+// route for getting details of a particular student.
+adminRouter.route("/get-student-data/:_id").get(checkAccessToken, getStudent); // protected route.
 
 export {adminRouter};
