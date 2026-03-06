@@ -238,16 +238,16 @@ const setFeePlan = asyncHandler(async(req, res) => {
 const inquiryAddition = asyncHandler(async(req, res) => {
 
     // destructuring the data from the body of the request object.
-    const {name, address, remark} = req.body;
+    const {name, address, remark, mobileNumber} = req.body;
 
     // checking if all the fields are filled or not.
-    if([name, address, remark].some(field => !field || field.trim() === ""))
+    if([name, address, remark, mobileNumber].some(field => !field || field.trim() === ""))
     {
         throw new ApiError(400, "All fields are required.");
     }
 
     // creating a new document in db for the new inquiry.
-    const inquiry = await Student.create({name, address, dateOfJoining: Date.now(), remark});
+    const inquiry = await Student.create({name, address, dateOfJoining: Date.now(), remark, mobileNumber});
 
     // checking if the new document is created or not.
     const createdInquiry = await Student.findById(inquiry._id);

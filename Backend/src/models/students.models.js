@@ -16,12 +16,11 @@ const studentSchema = new Schema({
         type: Date
     },
     email: {
-        type: String,
-        unique: true,
-        lowercase: true
+        type: String
     },
     mobileNumber: {
-        type: String
+        type: String,
+        unique: true
     },
     address: {
         type: String
