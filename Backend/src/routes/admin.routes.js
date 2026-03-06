@@ -7,7 +7,8 @@ import {
     setFeePlan, 
     inquiryAddition, 
     adminDashboard, 
-    getStudent 
+    getStudent,
+    leaveStudentOrInquiry
 } from "../controllers/admin.controllers.js";
 import { checkAccessToken } from "../middlewares/auth.middlewares.js";
 
@@ -36,5 +37,8 @@ adminRouter.route("/dashboard").get(checkAccessToken, adminDashboard); // protec
 
 // route for getting details of a particular student.
 adminRouter.route("/get-student-data/:_id").get(checkAccessToken, getStudent); // protected route.
+
+// route for deleting the student who left or the inquiry who left.
+adminRouter.route("/remove-student/:_id").patch(checkAccessToken, leaveStudentOrInquiry); // protected route.
 
 export {adminRouter};

@@ -286,7 +286,7 @@ const adminDashboard = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, data, "All required data finally retrieved"));
 
-});
+})
 
 const getStudent = asyncHandler(async(req, res) => {  // in admin dashboard. 
 
@@ -328,6 +328,61 @@ const getStudent = asyncHandler(async(req, res) => {  // in admin dashboard.
     .json(new ApiResponse(200, studentData, "Data of the required student is returned successfully"));
 })
 
+const leaveStudentOrInquiry = asyncHandler(async(req, res) => {
+
+    // extracting the _id of the required student from the params of the request object.
+    const id = req.params._id;
+
+    // checking if the _id is given in the params or not.
+    if(!id)
+    {
+        throw new ApiError(404, "Id of the student is not given");
+    }
+
+    // extracting the document of the required student from the db.
+    const student = await Student.findById(id).select("-password -refreshToken");
+
+    // checking if the student document is present or not.
+    if(!student)
+    {
+        throw new ApiError(400, "No such student is present in the database.");
+    }
+
+    // checking if the student is inquiry or is an admitted student and returning the response as required.
+    if(!student.isAdmitted)
+    {
+        const deletedInquiry = await Student.findByIdAndDelete(id);
+
+        if(!deletedInquiry)
+        {
+            throw new ApiError(500, "Inquiry is not deleted.");
+        }
+
+        // returning the final response.
+        return res
+        .status(200)
+        .json(new ApiResponse(200, deletedInquiry, "Inquiry is successfully deleted."));
+    }
+
+    // updating the hasLeft field of the admitted student document.
+    const leftStudent = await Student.findByIdAndUpdate(
+        id,
+        {hasLeft: true},
+        {returnDocument: "after"} // updated document return krta hai.
+    );
+
+    // checking if the student document is updated or not.
+    if(!leftStudent)
+    {
+        throw new ApiError(500, "Student document could not be updated.");
+    }
+
+    // returning the final response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, leftStudent, "Student document successfully updated."));
+})
+
 export {
     adminLogin,
     adminRegister,
@@ -336,5 +391,6 @@ export {
     setFeePlan,
     inquiryAddition,
     adminDashboard,
-    getStudent
+    getStudent,
+    leaveStudentOrInquiry
 };
