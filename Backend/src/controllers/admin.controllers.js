@@ -7,6 +7,7 @@ import { Student } from "../models/students.models.js";
 import { Fee } from "../models/fees.models.js";
 import { Parent } from "../models/parents.models.js";
 import { Guardian } from "../models/guardians.models.js";
+import { sendEmail } from "../utils/email.utils.js";
 
 const generateAccessAndRefreshToken = async(admin_id) => {
 
@@ -383,6 +384,84 @@ const leaveStudentOrInquiry = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, leftStudent, "Student document successfully updated."));
 })
 
+const customEmail = asyncHandler(async (req, res) => {
+
+    // destructuring data from the body of request object.
+    let { recipientType, studentId, subject, text } = req.body;
+
+    // checking if the fields are not empty.
+    if([recipientType, studentId, subject, text].some(field => !field || field.trim() === ""))
+    {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    // designing the data for implementing logic.
+    recipientType = recipientType.trim();
+    recipientType = recipientType.toLowerCase();
+    subject = subject.trim();
+    text = text.trim();
+
+    // extracting the recipient data from db.
+    let document;
+    if (recipientType === "student")
+    {
+        document = await Student.findById(studentId).select("-password -refreshToken");
+    }
+    else if (recipientType === "parent")
+    {
+        document = await Parent.findOne({ student_id: studentId }).select("-password -refreshToken");
+    }
+    else if (recipientType === "guardian")
+    {
+        document = await Guardian.findOne({ student_id: studentId }).select("-password -refreshToken");
+    }
+    else
+    {
+        throw new ApiError(400, "Invalid recipient type");
+    }
+
+    // checking if the document exists.
+    if (!document)
+    {
+        throw new ApiError(404, "Recipient not found");
+    }
+
+    // extracting the valid email from document.
+    let to;
+
+    if (recipientType === "student")
+    {
+        to = document.email;
+    }
+    else if (recipientType === "parent")
+    {
+        to = document.parentEmail;
+    }
+    else if(recipientType === "guardian")
+    {
+        to = document.guardianEmail;
+    }
+    else
+    {
+        throw new ApiError(400, "Not a valid recipient.");
+    }
+
+    // checking if the email exists.
+    if (!to) {
+        throw new ApiError(400, "Email address of the recipient doesn't exist.");
+    }
+
+    const info = await sendEmail(to, subject, text);
+
+    console.log(`Email sent: ${info?.response}`);
+
+    // returning the final response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, info, "Email sent successfully"));
+
+});
+
 export {
     adminLogin,
     adminRegister,
@@ -392,5 +471,6 @@ export {
     inquiryAddition,
     adminDashboard,
     getStudent,
-    leaveStudentOrInquiry
+    leaveStudentOrInquiry,
+    customEmail
 };

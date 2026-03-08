@@ -8,7 +8,8 @@ import {
     inquiryAddition, 
     adminDashboard, 
     getStudent,
-    leaveStudentOrInquiry
+    leaveStudentOrInquiry,
+    customEmail
 } from "../controllers/admin.controllers.js";
 import { checkAccessToken } from "../middlewares/auth.middlewares.js";
 
@@ -40,5 +41,8 @@ adminRouter.route("/get-student-data/:_id").get(checkAccessToken, getStudent); /
 
 // route for deleting the student who left or the inquiry who left.
 adminRouter.route("/remove-student/:_id").patch(checkAccessToken, leaveStudentOrInquiry); // protected route.
+
+// route for sending custom emails.
+adminRouter.route("/email").post(checkAccessToken, customEmail); // protected route.
 
 export {adminRouter};
