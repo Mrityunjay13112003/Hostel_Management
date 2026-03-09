@@ -6,6 +6,7 @@ import {asyncHandler} from "../utils/asyncHandler.utils.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.utils.js";
 import { ApiError } from "../utils/ApiError.utils.js";
 import {ApiResponse} from "../utils/ApiResponse.utils.js"
+import { Otp } from "../models/otp.models.js";
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async(student_id) => {
@@ -231,7 +232,57 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 
 const changeStudentPassword = asyncHandler(async(req, res) => {  // isme extra features lgega, baad me krenge.
 
+    // destructuring the email, password and confirmation password from the body of the request object.
+    const {email, password, confirmPassword} = req.body;
 
+    // checking if all the fields are filled.
+    if([email, password, confirmPassword].some(field => !field || field.trim() === ""))
+    {
+        throw new ApiError(400, "All fields are required.");
+    }
+
+    // checking if the password is equal to confirmPassword.
+    if(!(password === confirmPassword))
+    {
+        throw new ApiError(400, "Confirm your password.");
+    }
+
+    // extracting the otp document of the required email and checking if the otp is verified and deleting it.
+    const otp = await Otp.findOne({email});
+    if(!otp)
+    {
+        throw new ApiError(404, "Otp is not generated.");
+    }
+    if(!otp.hasVerified)
+    {
+        throw new ApiError(401, "Otp is not verified.");
+    }
+    const deletedOtp = await Otp.deleteOne({email});
+    if(deletedOtp.deletedCount === 0)
+    {
+        throw new ApiError(500, "Otp document could not be deleted.");
+    }
+
+    // storing the given new password in the database.
+    const student = await Student.findOne({email});
+    if(!student)
+    {
+        throw new ApiError(404, "No such student exists with given email");
+    }
+    student.password = password;
+    await student.save({validateBeforeSave: false});
+    const updatedStudent = await Student.findOne({email}).select("-password -refreshToken");
+
+    // checking if the updated password is saved or not.
+    if(!updatedStudent)
+    {
+        throw new ApiError(500, "Updated document could could not be fetched.");
+    }
+
+    // returning the final response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, updatedStudent, "Password successfully updated."));
 })
 
 const viewProfile = asyncHandler(async(req, res) => {
