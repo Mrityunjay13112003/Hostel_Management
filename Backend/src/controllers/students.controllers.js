@@ -7,7 +7,10 @@ import { uploadOnCloudinary } from "../utils/cloudinary.utils.js";
 import { ApiError } from "../utils/ApiError.utils.js";
 import {ApiResponse} from "../utils/ApiResponse.utils.js"
 import { Otp } from "../models/otp.models.js";
+import { sendEmail } from "../utils/email.utils.js";
+import {randomInt} from "crypto";
 import jwt from "jsonwebtoken";
+import { asyncWrapProviders } from "async_hooks";
 
 const generateAccessAndRefreshToken = async(student_id) => {
 
@@ -230,7 +233,7 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
     }
 })
 
-const changeStudentPassword = asyncHandler(async(req, res) => {  // isme extra features lgega, baad me krenge.
+const changeStudentPassword = asyncHandler(async(req, res) => {  
 
     // destructuring the email, password and confirmation password from the body of the request object.
     const {email, password, confirmPassword} = req.body;
@@ -319,11 +322,104 @@ const viewProfile = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, studentData, "Student profile is successfully returned"));
 })
 
+const generateOtp = asyncHandler(async(req, res) => {
+
+    // destructuring the email address from the body of the request object.
+    const {email} = req.body;
+
+    // checking if the email field is filled.
+    if(!email || email.trim() === "")
+    {
+        throw new ApiError(400, "Email is required.");
+    }
+    // checking if the email is of a student.
+    const student = await Student.findOne({email});
+    if(!student)
+    {
+        throw new ApiError(404, "Student doesn not have an email or the email entered is not of any student.");
+    }
+
+    // generating a six digit otp, its expiry for the email required.
+    const otp = randomInt(100000, 1000000).toString();
+    const otpExpiry = Date.now() + 5 * 60 * 1000;
+
+    // deleting the previously created documents of the same email in the otp model.
+    const deletedDocuments = await Otp.deleteMany({email});
+
+    // sending the email to the student having the otp.
+    const subject = "Email regarding the OTP."
+    const text = `Your One-Time Password (OTP) for password reset is ${otp}.
+    This OTP is valid for 5 minutes. Please do not share it with anyone for security reasons.`
+    const sentMail = await sendEmail(email, subject, text);
+    if(sentMail.accepted.length === 0)
+    {
+        throw new ApiError(500, "OTP could not be sent due to server errors.");
+    }
+
+    // creating a new document in otp model and saving all details in it.
+    const createdDocument = await Otp.create({email, otp, otpExpiry});
+    if(!createdDocument)
+    {
+        throw new ApiError(500, "Otp document could not be made.");
+    }
+
+    // returning the final response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "OTP sent successfully to the student."));
+})
+
+const verifyOtp = asyncHandler(async(req, res) => {
+
+    // destructuring the OTP and the email to which it was sent from the body of the request body.
+    const {otp, email} = req.body;
+
+    // checking if the fields are filled or not.
+    if([otp, email].some(field => !field || field.trim() === ""))
+    {
+        throw new ApiError(400, "All fields are required.");
+    }
+
+    // checking if the otp is sent on the given email.
+    const sentOtp = await Otp.findOne({email});
+    if(!sentOtp)
+    {
+        throw new ApiError(404, "OTP is not sent on the given email address.");
+    }
+
+    // checking if the given otp is correct and checking if it is sent in the given time duration.
+    if(sentOtp.otpExpiry < Date.now())
+    {
+        throw new ApiError(400, "OTP has already expired.");
+    }
+    if(sentOtp.otp !== otp)
+    {
+        throw new ApiError(400, "Incorrect OTP, please submit correct OTP.");
+    }
+
+    // checking if the otp is currently verified or not.
+    if(sentOtp.hasVerified)
+    {
+        throw new ApiError(400, "OTP already verified.");
+    }
+
+    // validating the otp.
+    sentOtp.hasVerified = true;
+    await sentOtp.save({validateBeforeSave: false});
+
+    // returning the final response.
+    return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "OTP is successfully verified."));
+})
+
 export {
     registerStudent,
     loginStudent,
     logoutStudent,
     refreshAccessToken,
     changeStudentPassword,
-    viewProfile
+    viewProfile,
+    generateOtp,
+    verifyOtp
 }

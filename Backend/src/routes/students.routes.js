@@ -1,6 +1,15 @@
 import { Router } from "express";
 import { upload } from "../middlewares/multer.middlewares.js";
-import { registerStudent, loginStudent, logoutStudent, refreshAccessToken, changeStudentPassword, viewProfile } from "../controllers/students.controllers.js";
+import {
+    registerStudent,
+    loginStudent,
+    logoutStudent,
+    refreshAccessToken,
+    changeStudentPassword,
+    viewProfile,
+    generateOtp,
+    verifyOtp
+} from "../controllers/students.controllers.js";
 import { checkAccessToken } from "../middlewares/auth.middlewares.js";
 
 const studentRouter = Router();
@@ -18,9 +27,18 @@ studentRouter.route("/logout").get(checkAccessToken, logoutStudent); // protecte
 studentRouter.route("/refresh-access-token").post(refreshAccessToken);
 
 // route for changing student password.
-studentRouter.route("/change-password").put(changeStudentPassword);
+studentRouter.route("/change-password").put(changeStudentPassword); // validation via OTP.
 
 // route for viewing the student profile.
 studentRouter.route("/profile").get(checkAccessToken,viewProfile); // protected route.
+
+// route for generating otp.
+studentRouter.route("/generate-otp").post(generateOtp);
+
+// route for resending otp.
+studentRouter.route("/resend-otp").post(generateOtp);
+
+// route for verifying the otp.
+studentRouter.route("/verify-otp").post(verifyOtp);
 
 export {studentRouter};
