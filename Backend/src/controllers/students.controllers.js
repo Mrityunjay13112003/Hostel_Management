@@ -36,7 +36,7 @@ const generateAccessAndRefreshToken = async(student_id) => {
     }
 } 
 
-const registerStudent = asyncHandler(async (req, res) => {  // update krna hoga is controller ko sms otp ki help se.
+const registerStudent = asyncHandler(async (req, res) => {
 
     // form data collected from req.body.
     const studentData = req.body;
@@ -53,11 +53,13 @@ const registerStudent = asyncHandler(async (req, res) => {  // update krna hoga 
 
     //checking if student already exists and checking whether its a valid inquiry or not.
     const existedInquiry = await Student.findOne({mobileNumber});
+    console.log("Request mobileNumber:", mobileNumber);
+    console.log("Fetched inquiry:", existedInquiry);
     if(!existedInquiry)
     {
         throw new ApiError(400, "Inquiry not registered. Student cannot be registered.");
     }
-    if(existedInquiry.studentId)
+    if(existedInquiry.isAdmitted)
     {
         throw new ApiError(409, "Student is already registered.");
     }
@@ -79,6 +81,14 @@ const registerStudent = asyncHandler(async (req, res) => {  // update krna hoga 
     const studentId = `GKRP-${noOfStudents}-${year}`;
     Object.assign(existedInquiry, {studentId, password, name, dateOfBirth, email, mobileNumber, address, institute, education, dateOfJoining, photo: photo.secure_url, isAdmitted: true});
     await existedInquiry.save({validateBeforeSave: false});
+
+    // removing the remark field from the student document.
+    await Student.updateOne(
+        {mobileNumber},
+        {
+            $unset: {remark: ""}
+        }
+    );
 
     //creating the document for the parent, guardian and fee of the newly registered student.
     await Promise.all([

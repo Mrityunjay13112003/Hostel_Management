@@ -11,13 +11,15 @@ const parentSchema = new Schema({
     },
     parentMobileNumber: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     parentEmail: {
         type: String,
         unique: true,
         lowercase: true,
         trim: true,
+        sparse: true
     },
     occupation: {
         type: String

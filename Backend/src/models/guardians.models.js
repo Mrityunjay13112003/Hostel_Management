@@ -11,13 +11,15 @@ const guardianSchema = new Schema({
     },
     guardianMobileNumber: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     guardianEmail: {
         type: String,
         unique: true,
         lowercase: true,
         trim: true,
+        sparse: true
     },
     guardianAddress: {
         type: String,
