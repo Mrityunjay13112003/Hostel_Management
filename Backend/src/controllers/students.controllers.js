@@ -10,7 +10,7 @@ import { Otp } from "../models/otp.models.js";
 import { sendEmail } from "../utils/email.utils.js";
 import {randomInt} from "crypto";
 import jwt from "jsonwebtoken";
-import { asyncWrapProviders } from "async_hooks";
+import { log } from "console";
 
 const generateAccessAndRefreshToken = async(student_id) => {
 
@@ -51,11 +51,15 @@ const registerStudent = asyncHandler(async (req, res) => {  // update krna hoga 
         throw new ApiError(400, "All fields are required");
     }
 
-    //checking if student already exists.
-    const existedStudent = await Student.findOne({mobileNumber});
-    if(existedStudent)
+    //checking if student already exists and checking whether its a valid inquiry or not.
+    const existedInquiry = await Student.findOne({mobileNumber});
+    if(!existedInquiry)
     {
-        throw new ApiError(409, "Student with the given mobile number already exists");
+        throw new ApiError(400, "Inquiry not registered. Student cannot be registered.");
+    }
+    if(existedInquiry.studentId)
+    {
+        throw new ApiError(409, "Student is already registered.");
     }
 
     //uploading the image from local server to cloudinary.
@@ -64,36 +68,67 @@ const registerStudent = asyncHandler(async (req, res) => {  // update krna hoga 
         throw new ApiError(400, "Photo is required");
     }
     const photo = await uploadOnCloudinary(req.file.path);
+    if(!photo)
+    {
+        throw new ApiError(500, "Photo upload failed");
+    }
 
-    //creating the document for the newly registered student.
-    const noOfStudents = await Student.countDocuments({isAdmitted: true}) + 1;
+    //updating the document of the inquiry into the document of a registered student.
+    const noOfStudents = (await Student.countDocuments({isAdmitted: true})) + 1;
     const year = new Date().getFullYear();
     const studentId = `GKRP-${noOfStudents}-${year}`;
-    const student = await Student.create({studentId, password, name, dateOfBirth, email, mobileNumber, address, institute, education, dateOfJoining, photo: photo.secure_url});
+    Object.assign(existedInquiry, {studentId, password, name, dateOfBirth, email, mobileNumber, address, institute, education, dateOfJoining, photo: photo.secure_url, isAdmitted: true});
+    await existedInquiry.save({validateBeforeSave: false});
 
-    //creating the document for the parent and guardian of the newly registered student.
-    const parent = await Parent.create({student_id: student._id, parentName, parentMobileNumber, parentEmail, occupation});
-    const guardian = await Guardian.create({student_id: student._id, guardianName, guardianMobileNumber, guardianEmail, guardianAddress});
+    //creating the document for the parent, guardian and fee of the newly registered student.
+    await Promise.all([
+        Parent.create({student_id: existedInquiry._id, parentName, parentMobileNumber, parentEmail, occupation}),
+        Guardian.create({student_id: existedInquiry._id, guardianName, guardianMobileNumber, guardianEmail, guardianAddress}),
+        Fee.create({student_id: existedInquiry._id})
+    ])
 
-    //creating the fee document for the newly registered student.
-    const fee = await Fee.create({student_id: student._id});
-
-    //checking if the student, parent, guardian or fee document is successfully created or not.
-    const createdStudent = await Student.findOne({_id: student._id}).select(
-        "-password -refreshToken"
-    );
-    const createdParent = await Parent.findOne({student_id: student._id});
-    const createdGuardian = await Guardian.findOne({student_id: student._id});
-    const createdFee = await Fee.findOne({student_id: student._id});
-    if(!createdStudent || !createdParent || !createdGuardian || !createdFee)
+    //checking if the inquiry is updated and parent, guardian or fee document is successfully created or not.
+    const updatedDetails = await Promise.all([
+        Student.findById(existedInquiry._id).select("-password -refreshToken"),
+        Parent.findOne({student_id: existedInquiry._id}),
+        Guardian.findOne({student_id: existedInquiry._id}),
+        Fee.findOne({student_id: existedInquiry._id})
+    ])
+    const [studentDoc, parentDoc, guardianDoc, feeDoc] = updatedDetails;
+    if(!studentDoc || !parentDoc || !guardianDoc || !feeDoc)
     {
         throw new ApiError(500, "Something went wrong while registering either of the student, parent, guardian or fee models");
     }
 
+    // successfully send the confirmation email for successful student registration if the student has the email address.
+    if(existedInquiry.email)
+    {
+        const to = existedInquiry.email;
+        const subject = "Confirmation for successful registration.";
+        const text = `Dear Student,
+        Congratulations! Your registration for the hostel has been successfully completed.
+        Your details have been recorded in our system, and you can now access hostel services using your student ID.
+        Student ID: ${studentId}
+        Name: ${name}
+        Date of Joining: ${dateOfJoining}
+        Please keep your Student ID safe, as it will be required for future hostel-related activities.
+        If you have any questions or need assistance, feel free to contact the hostel administration.
+
+        Best regards,
+        Hostel Administration
+        Gurukripa Boys' Hostel.`;
+        const info = await sendEmail(to, subject, text);
+        if(!info || info.accepted.length === 0)
+        {
+            throw new ApiError(500, "Email could not be sent.");
+        }
+        console.log(info);
+    }
+
     //return successful response
     return res
-    .status(200)
-    .json(new ApiResponse(200, createdStudent, "Student registered successfully"));
+    .status(201)
+    .json(new ApiResponse(201, {}, "Student registered successfully"));
 })
 
 const loginStudent = asyncHandler(async(req, res) => {

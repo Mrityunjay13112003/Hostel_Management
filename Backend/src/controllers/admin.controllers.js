@@ -249,6 +249,13 @@ const inquiryAddition = asyncHandler(async(req, res) => {    // in admin dashboa
         throw new ApiError(400, "All fields are required.");
     }
 
+    // checking if the inquiry already exists.
+    const registeredInquiry = await Student.findOne({mobileNumber});
+    if(registeredInquiry)
+    {
+        throw new ApiError(409, "Inquiry already exists.");
+    }
+
     // creating a new document in db for the new inquiry.
     const inquiry = await Student.create({name, address, dateOfJoining: Date.now(), remark, mobileNumber});
 
@@ -329,7 +336,7 @@ const getStudent = asyncHandler(async(req, res) => {  // in admin dashboard.
     .json(new ApiResponse(200, studentData, "Data of the required student is returned successfully"));
 })
 
-const leaveStudentOrInquiry = asyncHandler(async(req, res) => {
+const leaveStudentOrInquiry = asyncHandler(async(req, res) => {  // in admin dashboard.
 
     // extracting the _id of the required student from the params of the request object.
     const id = req.params._id;
@@ -384,7 +391,7 @@ const leaveStudentOrInquiry = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, leftStudent, "Student document successfully updated."));
 })
 
-const customEmail = asyncHandler(async (req, res) => {
+const customEmail = asyncHandler(async (req, res) => {  // in admin dashboard.
 
     // destructuring data from the body of request object.
     let { recipientType, studentId, subject, text } = req.body;

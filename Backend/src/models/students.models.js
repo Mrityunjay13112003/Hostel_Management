@@ -4,49 +4,60 @@ import jwt from "jsonwebtoken";
 
 const studentSchema = new Schema({    
     studentId: {
-        type: String
+        type: String,
+        required: true
     },
     password: {
-        type: String
+        type: String,
+        required: true
     },
     name: {
-        type: String
+        type: String,
+        required: true
     },
     dateOfBirth: {
-        type: Date
+        type: Date,
+        required: true
     },
     email: {
-        type: String
-    },
-    mobileNumber: {
         type: String,
         unique: true
     },
+    mobileNumber: {
+        type: String,
+        required: true,
+        unique: true
+    },
     address: {
-        type: String
+        type: String,
+        required: true
     },
     institute: {
-        type: String
+        type: String,
+        required: true
     },
     education: {
-        type: String
+        type: String,
+        required: true
     },
     dateOfJoining: {
-        type: Date
+        type: Date,
+        required: true
     },
     isAdmitted: {
         type: Boolean,
-        default: false
+        default: false,
     },
     hasLeft: {
         type: Boolean,
         default: false
     },
     photo: {
-        type: String  // cloudinary url.
+        type: String,  // cloudinary url.
+        required: true
     },
     remark: {         // only for the inquiry.
-        type: String  
+        type: String
     },
     refreshToken: {
         type: String
