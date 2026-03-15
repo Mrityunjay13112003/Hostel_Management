@@ -1,0 +1,5 @@
+const htmlTemplate = () => {
+    const template = `<!DOCTYPE html> <html> <head> <meta charset="UTF-8"> <title>Fee Payment Reminder</title> </head> <body style="margin:0;padding:0;background-color:#f2f4f6;font-family:Arial, Helvetica, sans-serif;"> <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px;"> <tr> <td align="center"> <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:6px;padding:30px;"> <tr> <td align="center"> <h2 style="color:#2c3e50;margin-bottom:10px;">Fee Payment Reminder</h2> </td> </tr> <tr> <td style="color:#444;font-size:15px;line-height:1.6;padding-top:10px;"> <p>Dear Parent / Guardian / Student,</p> <p> This is a reminder that the hostel fee payment is currently pending. Kindly ensure that the payment is completed at the earliest to avoid any inconvenience. </p> <p> If the payment has already been made recently, please disregard this message. </p> </td> </tr> <tr> <td style="padding-top:25px;font-size:13px;color:#777;line-height:1.5;"> <p> Regards,<br> <strong>${HOSTEL_NAME}</strong> </p> </td> </tr> </table> </td> </tr> </table> </body> </html>`;
+}
+
+export {htmlTemplate};
