@@ -1,9 +1,6 @@
-import { Student } from "../models/students.models.js";
-import { Guardian } from "../models/guardians.models.js";
-import { Parent } from "../models/parents.models.js";
 import { Fee } from "../models/fees.models.js";
 import nodeCron from "node-cron";
-import {htmlTemplate, reminder} from "../template/reminder.template.js"
+import {htmlTemplate} from "../template/reminder.template.js"
 import { sendEmail } from "../utils/email.utils.js";
 
 // actual fee reminder logic.
@@ -13,40 +10,59 @@ const feeReminder = async() => {
     {
         // fetching all the documents from the db whose dueDate < today and balance > 0.
         const today = new Date();
-        const feeDocuments = await Fee.find({
-            "dueDate": {$lte: today},
-            "balance": {$gt: 0}
-        });
+        today.setHours(23, 59, 59, 999);
+        const feeDocuments = await Fee.aggregate([
+            {
+                $match: {
+                    "dueDate": {$lte: today},
+                    "balance": {$gt: 0}
+                }
+            },
+            {
+                $lookup: {
+                    from: "students",
+                    localField: "student_id",
+                    foreignField: "_id",
+                    as: "student"
+                }
+            },
+            {
+                $lookup: {
+                    from: "guardians",
+                    localField: "student_id",
+                    foreignField: "student_id",
+                    as: "guardian"
+                }
+            },
+            {
+                $lookup: {
+                    from: "parents",
+                    localField: "student_id",
+                    foreignField: "student_id",
+                    as: "parent"
+                }
+            },
+        ]);
         if(!feeDocuments.length)
         {
             return;
         }
-        const students = feeDocuments.map(student => student.student_id);
+        
+        const sendReminderEmail = async(feeDocument) => {
+            let emails = [
+                feeDocument.student?.[0]?.email,
+                feeDocument.parent?.[0]?.parentEmail,
+                feeDocument.guardian?.[0]?.guardianEmail
+            ];
+            emails = emails.filter(email => Boolean(email));
+            emails = [...new Set(emails)];
 
-        // fetching the emails of the parents, guardians, and students of the found documents.
-        let emails = [];
-        for(const student of students)
-        {
-            const [studentDoc, parentDoc, guardianDoc] = await Promise.all([
-                Student.findOne({_id: student}).select("email"),
-                Parent.findOne({student_id: student}).select("parentEmail"),
-                Guardian.findOne({student_id: student}).select("guardianEmail")
-            ])
-            emails.push(
-                studentDoc?.email,
-                parentDoc?.parentEmail,
-                guardianDoc?.guardianEmail
-            );
+            const subject = `Fee Payment Reminder`;
+            const html = htmlTemplate(feeDocument.student?.[0]?.name, feeDocument?.dueDate, feeDocument?.balance)
+            await Promise.all(emails.map(email => sendEmail(email, subject, "", html)));
         }
-        emails = emails.filter(Boolean);
 
-        // sending the email to all the found email addresses.
-        const html = htmlTemplate();
-        await Promise.all(
-            emails.map(email =>
-                sendEmail(email, "Reminder for fee payment.", "", html)
-            )
-        );
+        await Promise.all(feeDocuments.map(feeDocument => sendReminderEmail(feeDocument)));
     }
     catch(err)
     {
@@ -59,7 +75,9 @@ const feeReminder = async() => {
 const scheduleReminder = () => {
     try
     {
-        return nodeCron.schedule("0 9 * * *", feeReminder)
+        return nodeCron.schedule("26 14 * * *", feeReminder, {
+            timezone: "Asia/Kolkata"
+        })
     }
     catch(err)
     {
