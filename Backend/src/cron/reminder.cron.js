@@ -75,7 +75,7 @@ const feeReminder = async() => {
 const scheduleReminder = () => {
     try
     {
-        return nodeCron.schedule("26 14 * * *", feeReminder, {
+        return nodeCron.schedule("0 9 * * *", feeReminder, {
             timezone: "Asia/Kolkata"
         })
     }
