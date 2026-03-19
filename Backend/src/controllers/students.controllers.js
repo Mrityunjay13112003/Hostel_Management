@@ -356,6 +356,23 @@ const viewProfile = asyncHandler(async(req, res) => {
             Fee.findOne({student_id: id}).select("-refreshToken -password").lean()
         ]);
 
+        // updating fee document so that it shows the current fee payment status of the student.
+        if(
+            fee.dueDate.getMonth() === new Date().getMonth() &&
+            fee.dueDate.getFullYear() === new Date().getFullYear()
+        )
+        {
+            fee.remark = null; // because it will show remark of previous payment.
+            fee.paymentDate = null; // because it will show date of previous payment.
+        }
+        else
+        {
+            fee.balance = 0; // because the student doesn't has to pay anything in this month.
+            let tempDate = new Date(fee.dueDate);
+            tempDate.setMonth(tempDate.getMonth() - 1);
+            fee.dueDate = tempDate;
+        }
+
         studentData.parent = parent;
         studentData.guardian = guardian;
         studentData.fee = fee;

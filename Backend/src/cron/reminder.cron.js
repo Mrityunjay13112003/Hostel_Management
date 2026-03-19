@@ -10,7 +10,7 @@ const feeReminder = async() => {
     {
         // fetching all the documents from the db whose dueDate < today and balance > 0.
         const today = new Date();
-        today.setHours(23, 59, 59, 999);
+        today.setHours(0, 0, 0, 0);
         const feeDocuments = await Fee.aggregate([
             {
                 $match: {

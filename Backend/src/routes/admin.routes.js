@@ -9,7 +9,8 @@ import {
     adminDashboard, 
     getStudent,
     leaveStudentOrInquiry,
-    customEmail
+    customEmail,
+    cashFeePayment
 } from "../controllers/admin.controllers.js";
 import { checkAccessToken } from "../middlewares/auth.middlewares.js";
 
@@ -44,5 +45,8 @@ adminRouter.route("/remove-student/:_id").patch(checkAccessToken, leaveStudentOr
 
 // route for sending custom emails.
 adminRouter.route("/email").post(checkAccessToken, customEmail); // protected route.
+
+// route for updating the fee status of the required student for cash payment.
+adminRouter.route("/cash-payment/:id").patch(checkAccessToken, cashFeePayment); // protected route.
 
 export {adminRouter};
