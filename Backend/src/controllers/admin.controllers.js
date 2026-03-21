@@ -3,11 +3,14 @@ import { asyncHandler } from "../utils/asyncHandler.utils.js";
 import { ApiError } from "../utils/ApiError.utils.js";
 import { ApiResponse } from "../utils/ApiResponse.utils.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { Student } from "../models/students.models.js";
 import { Fee } from "../models/fees.models.js";
 import { Parent } from "../models/parents.models.js";
 import { Guardian } from "../models/guardians.models.js";
+import { Detail } from "../models/feePaymentHistory.models.js";
 import { sendEmail } from "../utils/email.utils.js";
+import { increaseMonth, decreaseMonth } from "../utils/modifyMonth.utils.js";
 
 const generateAccessAndRefreshToken = async(admin_id) => {
 
@@ -276,9 +279,9 @@ const adminDashboard = asyncHandler(async (req, res) => {
 
     // fetching names of all types of students in parallel manner.
     const [inquiredStudents, currentStudents, leftStudents] = await Promise.all([
-        Student.find({ isAdmitted: false }).select("name"),
-        Student.find({ isAdmitted: true, hasLeft: false }).select("name"),
-        Student.find({ hasLeft: true }).select("name")
+        Student.find({ isAdmitted: false }).select("_id name"),
+        Student.find({ isAdmitted: true, hasLeft: false }).select("_id name"),
+        Student.find({ hasLeft: true }).select("_id name")
     ]);
 
     // creating final data object.
@@ -338,7 +341,7 @@ const getStudent = asyncHandler(async(req, res) => {  // in admin dashboard.
         {
             fee.balance = 0; // because the student doesn't has to pay anything in this month.
             let tempDate = new Date(fee.dueDate);
-            tempDate.setMonth(tempDate.getMonth() - 1);
+            tempDate = decreaseMonth(studentData.dateOfJoining, tempDate);
             fee.dueDate = tempDate;
         }
 
@@ -488,9 +491,137 @@ const customEmail = asyncHandler(async (req, res) => {  // in admin dashboard.
 
 const cashFeePayment = asyncHandler(async(req, res) => {  // in admin dashboard.
 
-    // extracting the student document id from url params and amount from body of request object.
+    // extracting the student document id from url params and paid amount from body of request object.
     const id = req.params.id;
+    const paidAmount = req.body.paidAmount;
+
+    // checking if both are filled or not.
+    if(!id || paidAmount === null) // paidAmount can be zero.
+    {
+        throw new ApiError(400, "All fields are required.");
+    }
+
+    // setting the monthAndYear value for fetching the required fee payment details document.
+    const monthAndYear = new Date().toLocaleString("en-IN",{
+        month: "long",
+        year: "numeric"
+    });
+
+    // start transaction.
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try
+    {
+        // fetching the fee and corresponding student document.
+        const {studentFee, studentData} = await Promise.all([
+            Fee.findOne({student_id: id}).session(session),
+            Student.findById(id).select("dateOfJoining").session(session)
+        ]);
+
+
+        if(!studentFee)
+        {
+            throw new ApiError(400, "Student is either not admitted or the student doesn't has the fee document.");
+        }
+
+        if(!studentData)
+        {
+            throw new ApiError(400, "Student not present.");
+        }
     
+        let {balance} = studentFee;
+        let dueDate = new Date(studentFee.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+
+        if(balance < paidAmount)
+        {
+            throw new ApiError(400, "More fee is paid than required.");
+        }
+
+        balance-=paidAmount;
+        if(balance === 0)
+        {
+            let paymentDate = new Date();
+            paymentDate.setHours(0, 0, 0, 0);
+            studentFee.paymentDate = paymentDate;
+            studentFee.balance = studentFee.plan; // setting the balance to be paid for next month.
+        
+            // setting up the remark.
+            if(paymentDate < dueDate)
+            {
+                studentFee.remark = "advance";
+                studentFee.advance = studentFee.plan;
+            }
+            else if(
+                paymentDate.getDate() === dueDate.getDate() &&
+                paymentDate.getMonth() === dueDate.getMonth() &&
+                paymentDate.getFullYear() === dueDate.getFullYear()
+            )
+            {
+                studentFee.remark = "on time";
+            }
+            else
+            {
+                studentFee.remark = "late";
+            }
+
+            // setting the due date for next month.
+            dueDate = increaseMonth(studentData.dateOfJoining, studentFee.dueDate);
+            studentFee.dueDate = dueDate;
+
+            // creating an object for storing the payment details.
+            const studentPaymentDetails = {
+                student_id: id,
+                plan: studentFee.plan,
+                paymentDate,
+                dueDate,
+                remark: studentFee.remark
+            }
+
+            // creating the document of the current month in the details collection if not created, else directly pushing the object into the array of the document of the current month.
+            await Detail.findOneAndUpdate(
+                { monthAndYear },
+                {
+                    $push: { students: studentPaymentDetails }
+                },
+                {
+                    upsert: true,
+                    new: true,
+                    session
+                }
+            );
+        }
+        else if(balance > 0)
+        {
+            studentFee.balance = balance;
+        }
+        else
+        {
+            throw new ApiError(400, "Paid more fee than what was required to be paid.");
+        }
+
+        // saving the fee status in db.
+        await studentFee.save({validateBeforeSave: false, session});
+
+        // commit transaction.
+        await session.commitTransaction()
+        session.endSession();
+
+        // returning the final response.
+        return res
+        .status(200)
+        .json(new ApiResponse(200, studentFee, "Fee of the student is updated."));
+        }
+        catch(err)
+        {
+
+            // abort transaction.
+            await session.abortTransaction();
+            session.endSession();
+
+            throw err;
+        }
 })
 
 export {

@@ -10,6 +10,7 @@ import { Otp } from "../models/otp.models.js";
 import { sendEmail } from "../utils/email.utils.js";
 import {randomInt} from "crypto";
 import jwt from "jsonwebtoken";
+import { decreaseMonth } from "../utils/modifyMonth.utils.js";
 import { log } from "console";
 
 const generateAccessAndRefreshToken = async(student_id) => {
@@ -369,7 +370,7 @@ const viewProfile = asyncHandler(async(req, res) => {
         {
             fee.balance = 0; // because the student doesn't has to pay anything in this month.
             let tempDate = new Date(fee.dueDate);
-            tempDate.setMonth(tempDate.getMonth() - 1);
+            tempDate = decreaseMonth(studentData.dateOfJoining, tempDate);
             fee.dueDate = tempDate;
         }
 
