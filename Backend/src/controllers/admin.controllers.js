@@ -236,7 +236,7 @@ const setFeePlan = asyncHandler(async(req, res) => {  // in admin dashboard.
     await Fee.updateMany({student_id: {$in: studentID}}, {$set: {plan: feePlan}});
 
     // sending the final successful response.
-    res
+    return res
     .status(200)
     .json(new ApiResponse(200, {}, "Fee updated successfully"));
 })
@@ -260,7 +260,7 @@ const inquiryAddition = asyncHandler(async(req, res) => {    // in admin dashboa
     }
 
     // creating a new document in db for the new inquiry.
-    const inquiry = await Student.create({name, address, dateOfJoining: Date.now(), remark, mobileNumber});
+    const inquiry = await Student.create({name, address, dateOfJoining: new Date(), remark, mobileNumber});
 
     // checking if the new document is created or not.
     const createdInquiry = await Student.findById(inquiry._id);
@@ -624,6 +624,37 @@ const cashFeePayment = asyncHandler(async(req, res) => {  // in admin dashboard.
         }
 })
 
+const getFeePaymentHistory = asyncHandler(async(req, res) => {  // in admin dashboard.
+
+    // fetching the month and year from the query.
+    let {month, year} = req.query;
+
+    // checking if the input data is sent or not.
+    if([month, year].some(field => !field || field.toString().trim() === ""))
+    {
+        throw new ApiError(400, "All fields are required.");
+    }
+
+    month = month.trim();
+    year = year.trim();
+
+    const formattedMonth = month.charAt(0).toUpperCase() + month.slice(1).toLowerCase();
+    const monthAndYear = `${formattedMonth} ${year}`;
+
+    // fetching the document from the db and returning it.
+    const feePaymentHistory = await Detail.findOne({monthAndYear}).lean();
+
+    if(!feePaymentHistory)
+    {
+        throw new ApiError(404, "No document found of corresponding month and year.");
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, feePaymentHistory, "Fee Payment History of the corresponding month and year is successfully returned."));
+
+})
+
 export {
     adminLogin,
     adminRegister,
@@ -635,5 +666,6 @@ export {
     getStudent,
     leaveStudentOrInquiry,
     customEmail,
-    cashFeePayment
+    cashFeePayment,
+    getFeePaymentHistory
 };

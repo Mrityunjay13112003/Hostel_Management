@@ -10,7 +10,8 @@ import {
     getStudent,
     leaveStudentOrInquiry,
     customEmail,
-    cashFeePayment
+    cashFeePayment,
+    getFeePaymentHistory
 } from "../controllers/admin.controllers.js";
 import { checkAccessToken } from "../middlewares/auth.middlewares.js";
 
@@ -47,6 +48,9 @@ adminRouter.route("/remove-student/:_id").patch(checkAccessToken, leaveStudentOr
 adminRouter.route("/email").post(checkAccessToken, customEmail); // protected route.
 
 // route for updating the fee status of the required student for cash payment.
-adminRouter.route("/cash-payment/:id").patch(checkAccessToken, cashFeePayment); // protected route.
+adminRouter.route("/payment/cash/:id").patch(checkAccessToken, cashFeePayment); // protected route.
+
+// route for fetching the fee history of the particular month and year.
+adminRouter.route("/fee/history").get(checkAccessToken, getFeePaymentHistory);  // protected route.
 
 export {adminRouter};
